@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 use URI::Escape;
 
@@ -27,7 +27,7 @@ sub stringtolink {
 		"street" => $street,
 		"city" => $city,
 		"country" => $country,
-		"language" => $language,
+		"language" => "us",
 		);
         
     my $url = hashreftolink(\%addr);
@@ -36,11 +36,12 @@ sub stringtolink {
 }
 
 sub hashreftolink {
-
     my ($rh_addr) = @_;
 
+    $rh_addr->{language} = "us";
+
     #test if the language we want exists, whether we have given at least a country and a city
-    if (&testlang($rh_addr->{language}) && 
+    if (&testlang($rh_addr->{language})  && 
         &testcountry($rh_addr->{country}) &&
         &cleanstring($rh_addr->{city})) {
 
@@ -73,7 +74,7 @@ sub hashreftolink {
 	    $url .= "/lc:" . $rh_addr->{language};
 	}
 
-	$url .= "/maps.py?BFCat=&Pyt=Tmap&newFL=";    
+	$url .= "/maps_result?BFCat=&Pyt=Tmap&newFL=";    
 
         # street
         if ($rh_addr->{street}){
@@ -117,12 +118,6 @@ sub testlang {
     if ($lang){ 
 	# list of languages in which Yahoo offers maps
 	my %langs = (
-		     "de" => 1,
-		     "es" => 1,
-		     "fr" => 1,
-		     "gb" => 1,
-		     "it" => 1,
-		     "uk" => 1,
 		     "us" => 1,
 		     ); 
 	return $langs{$lang} ? 1 : 0 ;
@@ -132,25 +127,12 @@ sub testlang {
 }
 
 sub testcountry {
-
     my ($cty)  = @_;
 
     if ($cty){ 
 	# list of countries for which Yahoo has maps
 	my %ctys = (
-		    "at" => 1,
-		    "be" => 1,
 		    "ca" => 1,
-		    "ch" => 1,
-		    "de" => 1,
-		    "es" => 1,
-		    "fr" => 1,
-		    "gb" => 1,
-		    "it" => 1,
-		    "lu" => 1,
-		    "nl" => 1,
-		    "pt" => 1,
-		    "uk" => 1,
 		    "us" => 1,
 		    ); 
 	return $ctys{$cty} ? 1 : 0 ;
@@ -186,13 +168,12 @@ WWW::YahooMaps - Create links to Yahoo! Maps
 
  #first method: PASSING ADDRESS BIT-BY-BIT
  my %addr = (
-  "street" => "Rämistrasse 5",
-  "city" => "8006 Zuerich",
-  "country" => "ch",
-  "language" => "de",
+  "street" => "555 N Michigan Ave",
+  "city" => "Chicago, IL 60611",
+  "country" => "us",
  );
 
- if (my $url = WWW:YahooMaps::hashreftolink(\%addr)){
+ if (my $url = WWW::YahooMaps::hashreftolink(\%addr)){
       print "url1 $url\n";
  }
 
@@ -204,18 +185,15 @@ WWW::YahooMaps - Create links to Yahoo! Maps
       print "url2 $url\n";
  }
 
-
- if (my $url = WWW::YahooMaps::stringtolink("fr","fr","75017 Paris; 11 bis, rue Torricelli", 1)){
+ #third method: CALL A FUNCTION WITH BIT-BY-BIT PARAMETERS
+ if (my $url = WWW::YahooMaps::stringtolink("us","us","Paris, TX; Main Street", 1)){
       print "url3 $url\n";
  }
 
-Code above will print:
-
-url1 http://de.maps.yahoo.com/py/lg:de/lc:de/maps.py?BFCat=&Pyt=Tmap&newFL=&addr=R%E4mistrasse%205&csz=8006%20Zuerich&country=ch
-
-url2 http://maps.yahoo.com/py/lg:/lc:/maps.py?BFCat=&Pyt=Tmap&newFL=&addr=101%20Morris%20Street&csz=Sebastopol,%20CA%2095472&country=us
-
-url3 http://fr.maps.yahoo.com/py/lg:fr/lc:fr/maps.py?BFCat=&Pyt=Tmap&newFL=&addr=11%20bis,%20rue%20Torricelli&csz=75017%20Paris&country=fr
+The code above will print:
+url1 http://maps.yahoo.com/py/lg:/lc:/maps_result?BFCat=&Pyt=Tmap&newFL=&addr=555%20N%20Michigan%20Ave&csz=Chicago%2C%20IL%2060611&country=us
+url2 http://maps.yahoo.com/py/lg:/lc:/maps_result?BFCat=&Pyt=Tmap&newFL=&addr=101%20Morris%20Street&csz=Sebastopol%2C%20CA%2095472&country=us
+url3 http://maps.yahoo.com/py/lg:/lc:/maps_result?BFCat=&Pyt=Tmap&newFL=&addr=Main%20Street&csz=Paris%2C%20TX&country=us
 
 
 
@@ -227,7 +205,7 @@ url3 http://fr.maps.yahoo.com/py/lg:fr/lc:fr/maps.py?BFCat=&Pyt=Tmap&newFL=&addr
 
 Pass a reference to a hash to hashreftolink() and get a link to the corresponding Yahoo! map.
 
-The keys of the hash are I<street> (optional), I<city>, I<country> and I<language>. The values of the keys country and language must be valid ISO 3166 two letter codes, and can be tested by the functions B<testcountry()> and B<testlanguage()> respectively.
+The keys of the hash are I<street> (optional), I<city>, and I<country>. The values of the keys country and language must be valid ISO 3166 two letter codes, and can be tested by the functions B<testcountry()> and B<testlanguage()> respectively.
 
 The key, value pair I<street> is optional, however adding it leads to a much more accurate map.
 
@@ -237,25 +215,14 @@ The value of city can be either a postal code or a city name, however adding bot
 
 Or, if you have a ready-made string with the adress info, pass it to stringtolink().
 
-The parameters are I<country>, I<language>, I<string> and I<swap>. In string, street and city should be separated by a semicolon ";" or a newline "\n". Since street is optional, you can also pass "; Paris" or "\n Zurich". Pass swap = 1 if you have a string where the city comes first, address second, e.g.: "New York, NY; Wall Street".
+The parameters are I<country>, I<language>, I<string> and I<swap>. In string, street and city should be separated by a semicolon ";" or a newline "\n". Since street is optional, you can also pass "; Paris, TX" or "\n Chicago, IL". Pass swap = 1 if you have a string where the city comes first, address second, e.g.: "New York, NY; Wall Street".
 
 =head2 Countries
 
-Yahoo offers maps for several countries - use the domain name (ISO 3166 2-letter code) for the {country} key. Currently available countries are: 
+Yahoo shut down maps services in Europe. To my knowledge, they only offer maps for the US and Canade.
 
- - Austria (at)
- - Belgium (be)
  - Canada (ca) - only in combination with language = "us"
- - France (fr)
- - Germany (de)
- - Italy (it)
- - Luxembourg (lu)
- - Netherlands (nl)
- - Portugal (pt)
- - Spain (es)
- - Switzerland (ch)
  - U.S.A. (us) - only in combination with language = "us"
- - United Kingdom (gb/uk)
 
 =head3 testcountry()
 
@@ -263,22 +230,13 @@ Use testcountry() to determine which countries are available, e.g.: testcountry(
 
 =head2 Languages
 
-Note that you can display maps for Germany in French, by passing "fr" as {language} and "de" as {country}.
-Supported languages are (again, use ISO 3166 codes for language): 
-
- - American English (us) - only in combination with country = "us"
- - British English (uk)
- - French (fr) 
- - German (de)
- - Italian (it)
- - Spanish (es)
+As Yahoo cancelled Maps in Europe, "us" remains as the only language option. The I<language> remains in the module for legacy reasons.
 
 =head3 testlang()
 
-Use testlang() to determine which languages are available, e.g.: testlang("es") => returns 1, testlang("dk") => returns 0.
+Use testlang() to determine which languages are available, e.g.: testlang("es") => returns 0, testlang("us") => returns 1. Legacy function.
 
-The language also determines which Yahoo server is used - the servers for language="us" are in the US, while servers for all others are in Europe.
-
+=head2 General Remarks
 If Yahoo can't find the exact address you pass, it will show the user its best guess with some alternative links.
 
 =head1 REQUIREMENTS
@@ -287,11 +245,11 @@ uses URI::Escape.
 
 =head1 AUTHOR
 
-Gabor Cselle, gaborcselle@yahoo.de
+Gabor Cselle, http://n.ethz.ch/student/cselleg, gabor (at) student [dot] ethz [dot] ch
 
 =head1 THANKS TO
 
-Ed Freyfogle, who wrote the original version.
+Ed Freyfogle, who came up with the idea and wrote a first draft.
 
 =head1 REVISIONS
 
@@ -299,10 +257,7 @@ Ed Freyfogle, who wrote the original version.
 
 0.2 : added Canada to countries, forces language="us" for US/CA, added docs for testcountry() and testlang()
 
+0.3 Yahoo cancelled all non-US maps products: new version allows language = "us", country = "us"/"ca" only
 
-=head1 SEE ALSO
-
-Find lists of ISO 3166 country codes here:
-http://dir.yahoo.com/Reference/Standards/International_and_Regional_Standards_Bodies/International_Organization_for_Standardization__ISO_/ISO_Country_Codes/
 
 =cut
